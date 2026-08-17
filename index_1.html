@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradBowNation Arrow Builder — Draw Weight, Spine & FOC Calculator</title>
+<meta name="description" content="A free traditional archery arrow-building tool: find your actual draw weight, a recommended spine range, and your arrow's front-of-center balance — all in one guided pass.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     BRAND TOKENS — this is a placeholder earthy/trad palette.
+     Swap these hex values (and the two Google Fonts above) once
+     you send over TradBowNation's exact brand colors/fonts —
+     everything else in the file reads from these variables.
+     ============================================================ */
+  :root{
+    --forest:#33452F;
+    --forest-dark:#212D1D;
+    --leather:#8B5A2B;
+    --leather-dark:#6E4620;
+    --parchment:#F6EFE1;
+    --parchment-dark:#ECE0C7;
+    --card:#FFFDF8;
+    --ink:#2B2118;
+    --ink-soft:#5B4C3D;
+    --ink-faint:#8A7A64;
+    --accent:#C1622D;
+    --good:#3F6B3A;
+    --warn:#A6741F;
+    --line:#DED0AF;
+    --white:#FFFFFF;
+    --radius:14px;
+    --radius-sm:9px;
+    --font-head:'Fraunces', Georgia, 'Iowan Old Style', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --shadow:0 1px 2px rgba(43,33,24,0.06), 0 6px 20px rgba(43,33,24,0.07);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--parchment);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:var(--font-head); margin:0; color:var(--forest-dark);}
+  a{color:var(--leather-dark);}
+  p{margin:0 0 0.75em 0;}
+
+  /* -------------------- header -------------------- */
+  .site-header{
+    background:linear-gradient(180deg, var(--forest) 0%, var(--forest-dark) 100%);
+    color:var(--parchment);
+    padding:28px 20px 34px;
+  }
+  .header-inner{max-width:1120px; margin:0 auto;}
+  .brand{display:flex; align-items:center; gap:12px; margin-bottom:10px;}
+  .brand-mark{font-size:28px; line-height:1;}
+  .brand-name{font-family:var(--font-head); font-weight:700; font-size:20px; letter-spacing:0.02em; color:var(--white);}
+  .brand-tag{font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:#C9D2C3;}
+  .header-blurb{max-width:640px; color:#DCE3D6; font-size:15px; margin:0;}
+
+  /* -------------------- layout -------------------- */
+  main.layout{
+    max-width:1120px;
+    margin:-16px auto 60px;
+    padding:0 20px;
+    display:grid;
+    grid-template-columns: 1fr 320px;
+    gap:22px;
+    align-items:start;
+  }
+  @media (max-width: 880px){
+    main.layout{grid-template-columns: 1fr;}
+    .summary-card{order:-1; position:static;}
+  }
+
+  .sections{display:flex; flex-direction:column; gap:20px;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:22px 24px 26px;
+  }
+
+  .section-head{display:flex; align-items:center; gap:12px; margin-bottom:4px;}
+  .step{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:50%;
+    background:var(--forest); color:var(--white);
+    font-family:var(--font-head); font-weight:600; font-size:14px;
+    flex:none;
+  }
+  .section-head h2{font-size:20px;}
+  .section-sub{color:var(--ink-soft); font-size:14px; margin:6px 0 18px 40px;}
+
+  /* -------------------- form -------------------- */
+  .field-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px,1fr));
+    gap:16px;
+    margin-left:40px;
+  }
+  .field label{
+    display:block; font-size:13px; font-weight:600; color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  .field input, .field select{
+    width:100%; padding:9px 11px; font-size:15px; font-family:var(--font-body);
+    border:1px solid var(--line); border-radius:var(--radius-sm);
+    background:var(--white); color:var(--ink);
+  }
+  .field select{appearance:auto;}
+  .field input:focus, .field select:focus{outline:2px solid var(--leather); outline-offset:1px;}
+  .field-checkbox{display:flex; flex-direction:column; justify-content:center;}
+  .checkbox-label{
+    display:flex !important; align-items:center; gap:9px;
+    font-size:14px !important; font-weight:600; color:var(--ink) !important;
+    cursor:pointer; margin-bottom:0 !important;
+  }
+  .checkbox-label input[type="checkbox"]{width:auto; accent-color:var(--leather); flex:none; margin:0;}
+  .field .hint{font-size:12px; color:var(--ink-faint); margin-top:4px;}
+
+  details.advanced{margin:16px 0 0 40px;}
+  details.advanced summary{
+    cursor:pointer; font-size:13px; font-weight:600; color:var(--leather-dark);
+    list-style:none;
+  }
+  details.advanced summary::-webkit-details-marker{display:none;}
+  details.advanced summary::before{content:"▸ "; }
+  details.advanced[open] summary::before{content:"▾ "; }
+  details.advanced .field-grid{margin-top:14px;}
+
+  details.howto{margin:14px 0 0 40px;}
+  details.howto summary{
+    cursor:pointer; font-size:13px; font-weight:600; color:var(--forest);
+    list-style:none;
+  }
+  details.howto summary::-webkit-details-marker{display:none;}
+  details.howto summary::before{content:"▸ "; }
+  details.howto[open] summary::before{content:"▾ "; }
+  .howto-body{
+    margin-top:12px; padding:16px 18px;
+    background:var(--parchment-dark); border:1px solid var(--line); border-radius:var(--radius-sm);
+  }
+  .howto-methods{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:640px){ .howto-methods{grid-template-columns:1fr;} }
+  .howto-method h4{font-family:var(--font-head); font-size:14px; margin:0 0 8px; color:var(--forest-dark);}
+  .howto-method ol{margin:0 0 8px; padding-left:18px; font-size:13px; color:var(--ink-soft); line-height:1.55;}
+  .howto-method .note{font-size:12px; color:var(--ink-faint); margin:6px 0 0;}
+  .howto-figure{width:100%; max-width:200px; display:block; margin:0 auto 10px;}
+
+  /* -------------------- result blocks inside sections -------------------- */
+  .inline-result{
+    margin:18px 0 0 40px;
+    padding:14px 16px;
+    background:var(--parchment-dark);
+    border-radius:var(--radius-sm);
+    border:1px solid var(--line);
+  }
+  .inline-result .big{
+    font-family:var(--font-head); font-weight:700; font-size:22px; color:var(--forest-dark);
+  }
+  .inline-result .label{font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-faint); margin-bottom:2px;}
+  .breakdown{margin-top:10px; font-size:13px; color:var(--ink-soft);}
+  .breakdown div{display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed var(--line);}
+  .breakdown div:last-child{border-bottom:none; font-weight:700; color:var(--ink);}
+
+  /* -------------------- summary card -------------------- */
+  .summary-card{
+    background:var(--forest-dark);
+    color:var(--parchment);
+    border-radius:var(--radius);
+    padding:22px 22px 18px;
+    box-shadow:var(--shadow);
+  }
+  /* Sticky sidebar is a desktop-only affordance — scoped to a min-width query
+     so it can never outrank the mobile override below in the cascade. */
+  @media (min-width: 881px){
+    .summary-card{position:sticky; top:20px;}
+  }
+  .summary-card h2{color:var(--white); font-size:18px; margin-bottom:14px;}
+  .summary-card dl{margin:0;}
+  .stat{padding:11px 0; border-bottom:1px solid rgba(246,239,225,0.14);}
+  .stat:last-of-type{border-bottom:none;}
+  .stat dt{font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:#B9C4B2; margin-bottom:3px;}
+  .stat dd{margin:0; font-family:var(--font-head); font-size:21px; font-weight:600; color:var(--white);}
+  .foc-tag{
+    display:inline-block; margin-top:4px; padding:3px 10px; border-radius:999px;
+    font-size:12px; font-weight:600; background:rgba(246,239,225,0.14); color:var(--parchment);
+  }
+  .summary-note{font-size:12.5px; color:#B9C4B2; margin:16px 0 0;}
+  .summary-note a{color:#E4D9BC;}
+
+  /* -------------------- diagram -------------------- */
+  .diagram-wrap{margin:18px 0 4px 40px;}
+  svg#arrow-diagram{width:100%; height:auto; display:block;}
+  .diagram-caption{font-size:12px; color:var(--ink-faint); margin:6px 0 0;}
+
+  .foc-scale{margin:16px 0 0 40px;}
+  .foc-scale-track{
+    display:flex; border-radius:8px; overflow:hidden; border:1px solid var(--line);
+  }
+  .foc-scale-seg{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; font-size:10.5px; font-weight:600; color:var(--white); line-height:1.3;
+    padding:7px 4px;
+  }
+  .foc-scale-seg .n{font-size:11.5px;}
+  .foc-scale-labels{position:relative; height:20px; margin-top:6px;}
+  .foc-pointer{
+    position:absolute; top:0; transform:translateX(-50%);
+    font-size:11.5px; color:var(--ink); font-weight:700; white-space:nowrap;
+  }
+
+  /* -------------------- methodology -------------------- */
+  .methodology p{font-size:14px; color:var(--ink-soft);}
+  .methodology h3{font-size:15px; margin:16px 0 6px; color:var(--forest-dark);}
+  .methodology ul{margin:0 0 12px; padding-left:20px; font-size:14px; color:var(--ink-soft);}
+  .methodology code{background:var(--parchment-dark); padding:1px 5px; border-radius:4px; font-size:13px;}
+
+  details.method-section{border-top:1px solid var(--line); padding:13px 0;}
+  details.method-section:first-of-type{margin-top:6px;}
+  details.method-section summary{
+    cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;
+    font-family:var(--font-head); font-size:15.5px; font-weight:600; color:var(--forest-dark);
+  }
+  details.method-section summary::-webkit-details-marker{display:none;}
+  details.method-section summary::before{content:"▸"; font-size:12px; color:var(--leather-dark); flex:none;}
+  details.method-section[open] summary::before{content:"▾";}
+  details.method-section .method-body{margin:12px 0 2px;}
+  details.method-section .method-body p{margin:0 0 10px;}
+  details.method-section .method-body p:last-child{margin-bottom:0;}
+  details.method-section .method-body ul{margin:0; padding-left:20px; font-size:14px; color:var(--ink-soft);}
+
+  footer{max-width:1120px; margin:0 auto 50px; padding:0 20px; color:var(--ink-faint); font-size:12.5px;}
+  footer a{color:var(--leather-dark);}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand">
+      <span class="brand-mark">🏹</span>
+      <div>
+        <div class="brand-name">TradBowNation</div>
+        <div class="brand-tag">Arrow Builder</div>
+      </div>
+    </div>
+    <p class="header-blurb">Draw weight, spine range, and balance point — in one guided pass, live as you type. Built for finger-release, no-let-off setups: recurve, longbow, and horsebow.</p>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ================= LIVE SUMMARY ================= -->
+  <aside class="summary-card" id="summary">
+    <h2>Your Build, Live</h2>
+    <dl>
+      <div class="stat">
+        <dt>Actual draw weight</dt>
+        <dd id="out-drawweight">—</dd>
+      </div>
+      <div class="stat">
+        <dt>Recommended spine range</dt>
+        <dd id="out-spine">—</dd>
+      </div>
+      <div class="stat">
+        <dt>Front of Center (FOC)</dt>
+        <dd id="out-foc">—</dd>
+        <span class="foc-tag" id="foc-tag"></span>
+      </div>
+    </dl>
+    <p class="summary-note">These are honest starting points, not exact science — confirm spine with bareshaft tuning before you cut and fletch a full dozen. <a href="#methodology">How this is calculated ↓</a></p>
+  </aside>
+
+  <div class="sections">
+
+    <!-- ================= SECTION 1: BOW ================= -->
+    <section class="card" id="section-bow">
+      <div class="section-head"><span class="step">1</span><h2>Your Bow</h2></div>
+      <p class="section-sub">Bows are marked at a 28&quot; draw. Your real draw weight — and everything downstream — depends on how far off 28&quot; you actually draw.</p>
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="markedWeight">Marked draw weight (lb)</label>
+          <input type="number" id="markedWeight" value="45" min="10" max="120" step="1">
+          <div class="hint">Printed on the limb, usually at 28&quot;.</div>
+        </div>
+        <div class="field">
+          <label for="markedDrawLength">Marked at (in)</label>
+          <input type="number" id="markedDrawLength" value="28" min="24" max="30" step="0.5">
+        </div>
+        <div class="field">
+          <label for="actualDrawLength">Your actual draw length (in)</label>
+          <input type="number" id="actualDrawLength" value="27" min="20" max="34" step="0.25">
+          <div class="hint">Fingertip-to-fingertip ÷ 2.5 is a rough proxy — a proper AMO measurement is better.</div>
+        </div>
+      </div>
+
+      <details class="howto">
+        <summary>Not sure how to measure your draw length? Quick tutorial</summary>
+        <div class="howto-body">
+          <div class="howto-methods">
+            <div class="howto-method">
+              <svg class="howto-figure" viewBox="0 0 220 150" role="img" aria-label="Stick figure standing with arms outstretched, measuring fingertip to fingertip">
+                <line x1="28" y1="20" x2="192" y2="20" stroke="#8A7A64" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <line x1="28" y1="13" x2="28" y2="27" stroke="#8A7A64" stroke-width="1.5"/>
+                <line x1="192" y1="13" x2="192" y2="27" stroke="#8A7A64" stroke-width="1.5"/>
+                <text x="110" y="12" font-size="10" fill="#8A7A64" text-anchor="middle" font-family="Inter, sans-serif">wingspan</text>
+                <circle cx="110" cy="42" r="12" fill="none" stroke="#33452F" stroke-width="3"/>
+                <line x1="110" y1="54" x2="110" y2="106" stroke="#33452F" stroke-width="3" stroke-linecap="round"/>
+                <line x1="28" y1="34" x2="192" y2="34" stroke="#33452F" stroke-width="3" stroke-linecap="round"/>
+                <line x1="110" y1="106" x2="84" y2="146" stroke="#33452F" stroke-width="3" stroke-linecap="round"/>
+                <line x1="110" y1="106" x2="136" y2="146" stroke="#33452F" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+              <h4>Quick estimate — no bow needed</h4>
+              <ol>
+                <li>Stand with your arms stretched straight out to your sides, like a &quot;T.&quot;</li>
+                <li>Have someone measure fingertip to fingertip, in inches — that's your wingspan.</li>
+                <li>Divide that number by 2.5.</li>
+              </ol>
+              <p class="note">Example: 70&quot; wingspan ÷ 2.5 = 28&quot; draw length. A fast starting point, not an exact number.</p>
+            </div>
+            <div class="howto-method">
+              <h4>Accurate — AMO standard</h4>
+              <ol>
+                <li>Nock a marked &quot;measuring arrow&quot; (or a dowel marked in inches) on the string.</li>
+                <li>Come to full draw at your normal anchor point, with proper form — don't overdraw to hit a number.</li>
+                <li>Have a helper mark where the arrow crosses the pivot point of the bow (the far edge of the grip).</li>
+                <li>Measure nock groove to that mark, then add 1.75&quot;. That's your AMO draw length.</li>
+              </ol>
+              <p class="note">No helper or measuring arrow handy? Most archery shops can measure this for you in under a minute.</p>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="advanced">
+        <summary>Advanced: bow setup</summary>
+        <div class="field-grid">
+          <div class="field">
+            <label for="lbsPerInch">Lb of draw weight per inch</label>
+            <input type="number" id="lbsPerInch" value="2.5" min="1.5" max="4" step="0.1">
+            <div class="hint">Community rule-of-thumb is roughly 2–3 lb per inch and varies by limb design — 2.5 is a reasonable middle default.</div>
+          </div>
+          <div class="field">
+            <label for="bowType">Bow type</label>
+            <select id="bowType">
+              <option value="recurve" selected>Recurve / center-shot</option>
+              <option value="longbow">Longbow / selfbow</option>
+            </select>
+            <div class="hint">Non-center-shot bows flex the arrow around the riser more, so published charts call for a stiffer spine at the same draw weight.</div>
+          </div>
+          <div class="field">
+            <label for="bowTypeAdj">Longbow/selfbow spine adjustment (lb)</label>
+            <input type="number" id="bowTypeAdj" value="5" min="0" max="10" step="0.5">
+            <div class="hint">Only applied when "Longbow / selfbow" is selected above.</div>
+          </div>
+        </div>
+        <div class="field-grid" style="margin-top:14px;">
+          <div class="field field-checkbox">
+            <label class="checkbox-label" for="fastFlight">
+              <input type="checkbox" id="fastFlight">
+              <span>Using a Fast Flight® (or other low-stretch) string</span>
+            </label>
+            <div class="hint">Low-stretch strings transfer more energy to the arrow, which published spine charts treat as extra effective draw weight.</div>
+          </div>
+          <div class="field">
+            <label for="fastFlightAdj">Fast Flight spine adjustment (lb)</label>
+            <input type="number" id="fastFlightAdj" value="5" min="0" max="10" step="0.5">
+            <div class="hint">Only applied when the checkbox is on.</div>
+          </div>
+        </div>
+      </details>
+
+      <div class="inline-result">
+        <div class="label">Your actual draw weight</div>
+        <div class="big" id="drawweight-big">—</div>
+        <div class="breakdown" id="drawweight-breakdown"></div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION 2: ARROW & SPINE ================= -->
+    <section class="card" id="section-arrow">
+      <div class="section-head"><span class="step">2</span><h2>Your Arrow &amp; Spine</h2></div>
+      <p class="section-sub">A recommended spine <em>range</em>, built on the universal wood-shaft-equivalent pound bands every trad shaft is cross-referenced against — then converted to your material.</p>
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="material">Shaft material</label>
+          <select id="material">
+            <option value="wood" selected>Wood</option>
+            <option value="carbon">Carbon</option>
+          </select>
+          <div class="hint" id="material-hint">Spine is rated in pounds — higher # = stiffer.</div>
+        </div>
+        <div class="field">
+          <label for="arrowLength">Arrow length (in)</label>
+          <input type="number" id="arrowLength" value="28" min="20" max="34" step="0.25">
+          <div class="hint">Nock groove throat to end of shaft (not including the point).</div>
+        </div>
+        <div class="field">
+          <label for="pointWeight">Point weight (gr)</label>
+          <input type="number" id="pointWeight" value="125" min="50" max="300" step="5">
+        </div>
+      </div>
+
+      <details class="advanced">
+        <summary>Advanced: adjustment rules</summary>
+        <div class="field-grid">
+          <div class="field">
+            <label for="baseOffset">Baseline spine offset (lb)</label>
+            <input type="number" id="baseOffset" value="-9.5" min="-15" max="0" step="0.5">
+            <div class="hint">Published charts recommend a spine noticeably below actual draw weight, not equal to it — this closes that gap before the other adjustments apply.</div>
+          </div>
+          <div class="field">
+            <label for="lengthAdj">Lb per inch of arrow length off 28&quot;</label>
+            <input type="number" id="lengthAdj" value="5" min="2" max="8" step="0.5">
+            <div class="hint">Longer than 28&quot; flexes more, so it needs a stiffer (higher #) spine to compensate.</div>
+          </div>
+          <div class="field">
+            <label for="pointAdj">Lb per 25gr of point weight off 125gr</label>
+            <input type="number" id="pointAdj" value="3" min="1" max="6" step="0.5">
+            <div class="hint">Heavier points weaken effective spine, so they push the recommendation stiffer too.</div>
+          </div>
+          <div class="field">
+            <label for="spineWindow">Range width (±lb)</label>
+            <input type="number" id="spineWindow" value="3" min="1" max="6" step="0.5">
+            <div class="hint">How wide a band to show around the calculated center point.</div>
+          </div>
+        </div>
+      </details>
+
+      <div class="inline-result">
+        <div class="label" id="spine-label">Recommended spine range · wood shaft</div>
+        <div class="big" id="spine-big">—</div>
+        <div class="hint" id="spine-note" style="margin:2px 0 0;"></div>
+        <div class="breakdown" id="spine-breakdown"></div>
+      </div>
+    </section>
+
+    <!-- ================= SECTION 3: FOC ================= -->
+    <section class="card" id="section-foc">
+      <div class="section-head"><span class="step">3</span><h2>Balance Point (FOC)</h2></div>
+      <p class="section-sub">Estimated from component weights before you've even built the arrow — arrow length and point weight are carried over from Step 2.</p>
+
+      <div class="field-grid">
+        <div class="field">
+          <label for="gpi">Shaft weight (grains per inch)</label>
+          <input type="number" id="gpi" value="9.0" min="3" max="20" step="0.1">
+          <div class="hint" id="gpi-hint">Check your shaft's spec sheet — often printed as &quot;GPI.&quot;</div>
+        </div>
+        <div class="field">
+          <label for="insertWeight">Insert weight (gr)</label>
+          <input type="number" id="insertWeight" value="10" min="0" max="150" step="1">
+        </div>
+        <div class="field">
+          <label for="nockWeight">Nock weight (gr)</label>
+          <input type="number" id="nockWeight" value="9" min="0" max="40" step="1">
+        </div>
+        <div class="field">
+          <label for="fletchWeight">Fletching, total (gr)</label>
+          <input type="number" id="fletchWeight" value="18" min="0" max="60" step="1">
+        </div>
+        <div class="field">
+          <label for="fletchPos">Fletching position from nock (in)</label>
+          <input type="number" id="fletchPos" value="1.5" min="0" max="6" step="0.25">
+        </div>
+      </div>
+
+      <div class="inline-result">
+        <div class="label">Estimated FOC</div>
+        <div class="big" id="foc-big">—</div>
+        <div class="breakdown" id="foc-breakdown"></div>
+      </div>
+
+      <div class="diagram-wrap">
+        <svg id="arrow-diagram" viewBox="0 0 640 170" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="diagram-title">
+          <title id="diagram-title">Arrow balance point diagram</title>
+          <!-- shaft -->
+          <line x1="60" y1="70" x2="580" y2="70" stroke="#8B5A2B" stroke-width="4" stroke-linecap="round"/>
+          <!-- nock -->
+          <circle cx="60" cy="70" r="7" fill="#33452F"/>
+          <text x="60" y="98" font-size="11" fill="#5B4C3D" text-anchor="middle" font-family="Inter, sans-serif">Nock</text>
+          <!-- fletching group (updated by JS) -->
+          <g id="fletch-marks"></g>
+          <text id="fletch-label" x="0" y="98" font-size="11" fill="#5B4C3D" text-anchor="middle" font-family="Inter, sans-serif">Fletching</text>
+          <!-- point -->
+          <polygon points="580,58 604,70 580,82" fill="#2B2118"/>
+          <text x="592" y="98" font-size="11" fill="#5B4C3D" text-anchor="middle" font-family="Inter, sans-serif">Point</text>
+          <!-- geometric center (dashed) -->
+          <line id="center-line" x1="320" y1="40" x2="320" y2="100" stroke="#8A7A64" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <text id="center-label" x="320" y="34" font-size="10.5" fill="#8A7A64" text-anchor="middle" font-family="Inter, sans-serif">Geometric center</text>
+          <!-- balance point marker -->
+          <g id="cg-marker">
+            <line id="cg-line" x1="320" y1="46" x2="320" y2="94" stroke="#C1622D" stroke-width="2.5"/>
+            <polygon id="cg-arrow" points="320,100 313,112 327,112" fill="#C1622D"/>
+            <text id="cg-label" x="320" y="128" font-size="12" font-weight="700" fill="#C1622D" text-anchor="middle" font-family="Inter, sans-serif">Balance point</text>
+            <text id="cg-sublabel" x="320" y="144" font-size="11" fill="#5B4C3D" text-anchor="middle" font-family="Inter, sans-serif"></text>
+          </g>
+        </svg>
+        <p class="diagram-caption">Diagram is proportional, not to exact physical scale. The balance point (orange) sits forward of the geometric center by an amount that defines your FOC%.</p>
+      </div>
+
+      <div class="foc-scale">
+        <div class="foc-scale-track">
+          <div class="foc-scale-seg" style="background:#8A7A64;"><span class="n">&lt; 8%</span>light</div>
+          <div class="foc-scale-seg" style="background:#3F6B3A;"><span class="n">8–12%</span>typical</div>
+          <div class="foc-scale-seg" style="background:#A6741F;"><span class="n">12–19%</span>hunting</div>
+          <div class="foc-scale-seg" style="background:#8B3A2B;"><span class="n">19%+</span>high FOC</div>
+        </div>
+        <div class="foc-scale-labels" id="foc-scale-labels" style="position:relative; height:16px;"></div>
+      </div>
+    </section>
+
+    <!-- ================= METHODOLOGY ================= -->
+    <section class="card methodology" id="methodology">
+      <h2>How this is calculated (and where it can be wrong)</h2>
+      <p>This tool uses transparent, widely-used traditional-archery rules of thumb — not a hidden formula, and not a physics simulation of your exact bow. Every number above is one click away from being changed and re-run. Tap any line below to expand it.</p>
+
+      <details class="method-section">
+        <summary>Draw weight at your draw length</summary>
+        <div class="method-body">
+          <p><code>actual weight = marked weight + (your draw length − marked draw length) × lb-per-inch</code>. The lb-per-inch figure is a community approximation (commonly 2–3) that varies by limb design — treat the result as close, not exact.</p>
+        </div>
+      </details>
+
+      <details class="method-section">
+        <summary>Spine range</summary>
+        <div class="method-body">
+          <p><code>center = actual draw weight + baseline spine offset + (arrow length − 28) × length-adjust + ((point weight − 125) / 25) × point-adjust + longbow/selfbow adjustment + Fast Flight adjustment</code>, shown as a ± band around that center. Longer arrows and heavier points both flex an arrow more in flight, so both push the recommendation toward a stiffer (higher-pound) shaft. This is a starting bracket for shopping — cross-reference it against your specific shaft brand's chart (wood or carbon), and confirm with bareshaft or paper tuning before committing to a full dozen. Release style, form, and individual bow behavior all shift real-world dynamic spine in ways no calculator fully captures.</p>
+          <p>The baseline spine offset (default −9.5#) exists because recommended spine isn't a 1:1 match to draw weight — published trad charts consistently recommend a spine several pounds below actual draw weight, not equal to it, and early beta testing confirmed the gap on real, bareshaft-tuned setups. Without it, the tool ran noticeably stiffer than what beta testers were actually finding worked. It's applied before every other adjustment and is editable like the rest, since it's inferred from a limited number of real tuning results and will likely get more precise as more beta feedback comes in.</p>
+          <p>Two more adjustments live in Step 1's "Advanced: bow setup" and are optional, off by default. A non-center-shot bow (longbow or selfbow) flexes the arrow around the riser more than a center-shot recurve does, so published trad spine charts call for a stiffer spine — commonly around 5# — at the same actual draw weight; select "Longbow / selfbow" to add it. A Fast Flight (or other low-stretch) string transfers more energy to the arrow, which those same charts treat as roughly 5# of extra effective draw weight for spine purposes only — it doesn't change what your bow actually pulls on a scale. Both defaults are editable, since the exact figure varies by chart and bow.</p>
+        </div>
+      </details>
+
+      <details class="method-section">
+        <summary>Carbon conversion</summary>
+        <div class="method-body">
+          <p>The underlying calculation is always done in wood-shaft pounds — that's the physical, brand-agnostic unit the rest of the math is built on. For carbon, that range is converted to a static-spine deflection number (the 400/500/600-style rating, where a <em>lower</em> number is stiffer) using a smoothed version of the wood-to-carbon bands commonly published across trad shaft sellers, then rounded to the nearest hundred — matching how carbon shafts are actually sold. It's an approximation — carbon spine also shifts with shaft diameter and wall construction, so treat it as your starting search term, not gospel.</p>
+        </div>
+      </details>
+
+      <details class="method-section">
+        <summary>Front of Center (FOC)</summary>
+        <div class="method-body">
+          <p>FOC is estimated as a weighted balance point: the shaft's weight is treated as evenly spread along its length (center at the midpoint), point and insert weight are treated as concentrated at the front, and nock and fletching weight are treated as concentrated near the back. <code>FOC% = ((balance point − arrow length / 2) / arrow length) × 100</code>. Once you've actually built the arrow, balance it on your fingertip or a dowel to check the real figure — this estimate gets you very close but glue, wrap, and crest weight aren't accounted for.</p>
+        </div>
+      </details>
+
+      <details class="method-section">
+        <summary>What this tool doesn't do</summary>
+        <div class="method-body">
+          <ul>
+            <li>It doesn't know your release style, anchor, or form — all of which shift real-world dynamic spine.</li>
+            <li>It doesn't replace bareshaft or paper tuning — treat every number here as your starting point at the shop, not your final answer at full draw.</li>
+            <li>It isn't tied to any shaft brand's proprietary chart or catalog — cross-reference the spine range against whatever shafts you're actually buying.</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <p>Built for the traditional archery community — recurve, longbow, horsebow, and selfbow. Free to use, no account, nothing saved off your device. Questions or a bad recommendation to report? Reach out via TradBowNation.</p>
+</footer>
+
+<script>
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const fields = [
+    'markedWeight','markedDrawLength','actualDrawLength','lbsPerInch','bowType','bowTypeAdj',
+    'fastFlight','fastFlightAdj',
+    'material','arrowLength','pointWeight','baseOffset','lengthAdj','pointAdj','spineWindow',
+    'gpi','insertWeight','nockWeight','fletchWeight','fletchPos'
+  ];
+
+  function num(id){
+    const v = parseFloat($(id).value);
+    return isNaN(v) ? null : v;
+  }
+
+  function checked(id){
+    return $(id) ? $(id).checked : false;
+  }
+
+  function fmt(n, digits){
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    return n.toLocaleString(undefined, {minimumFractionDigits: digits, maximumFractionDigits: digits});
+  }
+
+  // ---------- wood-lb ↔ carbon static-spine cross-reference ----------
+  // Anchor points drawn from the community-published wood/carbon cross-reference
+  // bands widely used by trad shaft sellers. Approximate by nature — carbon spine
+  // also shifts with shaft diameter and wall thickness, so always confirm against
+  // your specific shaft brand's chart.
+  const WOOD_TO_CARBON_ANCHORS = [
+    [20,900],[25,800],[30,700],[35,600],[40,500],[45,450],
+    [50,400],[55,350],[60,320],[65,290],[70,260],[80,200]
+  ];
+  // Carbon shafts are sold in round-hundred spine sizes (400, 500, 600...) —
+  // snap the interpolated value to the nearest one.
+  const CARBON_STANDARD_SIZES = [1500,1400,1300,1200,1100,1000,900,800,700,600,500,400,300,200];
+
+  function interpolate(x, pts){
+    if (x <= pts[0][0]){
+      const [x0,y0] = pts[0], [x1,y1] = pts[1];
+      return y0 + ((y1-y0)/(x1-x0)) * (x-x0);
+    }
+    if (x >= pts[pts.length-1][0]){
+      const [x0,y0] = pts[pts.length-2], [x1,y1] = pts[pts.length-1];
+      return y1 + ((y1-y0)/(x1-x0)) * (x-x1);
+    }
+    for (let i=0;i<pts.length-1;i++){
+      const [x0,y0] = pts[i], [x1,y1] = pts[i+1];
+      if (x>=x0 && x<=x1){
+        const t = (x-x0)/(x1-x0);
+        return y0 + t*(y1-y0);
+      }
+    }
+  }
+
+  function poundsToCarbonSpine(lb){
+    return interpolate(lb, WOOD_TO_CARBON_ANCHORS);
+  }
+
+  function nearestStandardCarbon(spineNum){
+    return CARBON_STANDARD_SIZES.reduce(function(prev,curr){
+      return Math.abs(curr-spineNum) < Math.abs(prev-spineNum) ? curr : prev;
+    });
+  }
+
+  const MATERIAL_COPY = {
+    wood: {
+      materialHint: 'Spine is rated in pounds — higher # = stiffer.',
+      gpiHint: 'Check your shaft’s spec sheet — often printed as "GPI." Typical wood: 8–11 GPI.',
+      spineLabel: 'Recommended spine range · wood shaft'
+    },
+    carbon: {
+      materialHint: 'Carbon is rated by static spine deflection, by the hundred (400, 500, 600...) — lower # = stiffer (opposite of wood).',
+      gpiHint: 'Check your shaft’s spec sheet — often printed as "GPI." Typical carbon: 6–9 GPI.',
+      spineLabel: 'Recommended spine range · carbon (static spine)'
+    }
+  };
+
+  function recalc(){
+    // ---------- 1. Draw weight ----------
+    const markedWeight = num('markedWeight');
+    const markedDrawLength = num('markedDrawLength');
+    const actualDrawLength = num('actualDrawLength');
+    const lbsPerInch = num('lbsPerInch');
+
+    let actualDrawWeight = null;
+    if (markedWeight !== null && markedDrawLength !== null && actualDrawLength !== null && lbsPerInch !== null){
+      actualDrawWeight = markedWeight + (actualDrawLength - markedDrawLength) * lbsPerInch;
+    }
+
+    if (actualDrawWeight !== null){
+      $('drawweight-big').textContent = fmt(actualDrawWeight,1) + ' lb';
+      $('out-drawweight').textContent = fmt(actualDrawWeight,1) + ' lb';
+      const diff = actualDrawLength - markedDrawLength;
+      $('drawweight-breakdown').innerHTML =
+        '<div><span>Marked weight</span><span>' + fmt(markedWeight,1) + ' lb</span></div>' +
+        '<div><span>Draw length adjustment</span><span>' + (diff>=0?'+':'') + fmt(diff*lbsPerInch,1) + ' lb</span></div>' +
+        '<div><span>Actual draw weight</span><span>' + fmt(actualDrawWeight,1) + ' lb</span></div>';
+    } else {
+      $('drawweight-big').textContent = '—';
+      $('out-drawweight').textContent = '—';
+      $('drawweight-breakdown').innerHTML = '';
+    }
+
+    // ---------- 2. Spine ----------
+    const material = $('material') ? $('material').value : 'wood';
+    const copy = MATERIAL_COPY[material] || MATERIAL_COPY.wood;
+    $('material-hint').textContent = copy.materialHint;
+    $('spine-label').textContent = copy.spineLabel;
+    $('gpi-hint').textContent = copy.gpiHint;
+
+    const arrowLength = num('arrowLength');
+    const pointWeight = num('pointWeight');
+    const lengthAdj = num('lengthAdj');
+    const pointAdj = num('pointAdj');
+    const spineWindow = num('spineWindow');
+    const baseOffset = num('baseOffset');
+    const bowType = $('bowType') ? $('bowType').value : 'recurve';
+    const bowTypeAdjMagnitude = num('bowTypeAdj');
+    const fastFlightOn = checked('fastFlight');
+    const fastFlightAdjMagnitude = num('fastFlightAdj');
+
+    let spineCenter = null, lengthAdjustment = null, pointAdjustment = null;
+    let bowTypeAdjustment = 0, fastFlightAdjustment = 0;
+    if (actualDrawWeight !== null && arrowLength !== null && pointWeight !== null && lengthAdj !== null && pointAdj !== null && baseOffset !== null){
+      lengthAdjustment = (arrowLength - 28) * lengthAdj;
+      pointAdjustment = ((pointWeight - 125) / 25) * pointAdj;
+      bowTypeAdjustment = (bowType === 'longbow' && bowTypeAdjMagnitude !== null) ? bowTypeAdjMagnitude : 0;
+      fastFlightAdjustment = (fastFlightOn && fastFlightAdjMagnitude !== null) ? fastFlightAdjMagnitude : 0;
+      spineCenter = actualDrawWeight + baseOffset + lengthAdjustment + pointAdjustment + bowTypeAdjustment + fastFlightAdjustment;
+    }
+
+    if (spineCenter !== null && spineWindow !== null){
+      const lo = spineCenter - spineWindow;
+      const hi = spineCenter + spineWindow;
+      const woodRangeText = fmt(lo,0) + '–' + fmt(hi,0) + '#';
+
+      let displayText = woodRangeText;
+      let noteText = '';
+
+      if (material === 'carbon'){
+        const carbonHi = nearestStandardCarbon(poundsToCarbonSpine(lo)); // weaker end -> higher number
+        const carbonLo = nearestStandardCarbon(poundsToCarbonSpine(hi)); // stiffer end -> lower number
+        displayText = (carbonLo === carbonHi)
+          ? ('≈ ' + fmt(carbonLo,0) + ' spine')
+          : (fmt(carbonLo,0) + '–' + fmt(carbonHi,0) + ' spine');
+        noteText = 'Wood-equivalent ' + woodRangeText + ' · lower number = stiffer · rounded to the nearest hundred — confirm against your shaft brand\'s chart.';
+      } else {
+        noteText = 'Confirm with bareshaft tuning before cutting a full dozen.';
+      }
+
+      $('spine-big').textContent = displayText;
+      $('out-spine').textContent = displayText;
+      $('spine-note').textContent = noteText;
+
+      let rows = [
+        '<div><span>Actual draw weight</span><span>' + fmt(actualDrawWeight,1) + ' lb</span></div>',
+        '<div><span>Baseline spine offset</span><span>' + fmt(baseOffset,1) + ' lb</span></div>',
+        '<div><span>Arrow length adjustment</span><span>' + (lengthAdjustment>=0?'+':'') + fmt(lengthAdjustment,1) + ' lb</span></div>',
+        '<div><span>Point weight adjustment</span><span>' + (pointAdjustment>=0?'+':'') + fmt(pointAdjustment,1) + ' lb</span></div>'
+      ];
+      if (bowType === 'longbow'){
+        rows.push('<div><span>Longbow/selfbow adjustment</span><span>+' + fmt(bowTypeAdjustment,1) + ' lb</span></div>');
+      }
+      if (fastFlightOn){
+        rows.push('<div><span>Fast Flight string adjustment</span><span>+' + fmt(fastFlightAdjustment,1) + ' lb</span></div>');
+      }
+      $('spine-breakdown').innerHTML = rows.join('');
+    } else {
+      $('spine-big').textContent = '—';
+      $('out-spine').textContent = '—';
+      $('spine-note').textContent = '';
+      $('spine-breakdown').innerHTML = '';
+    }
+
+    // ---------- 3. FOC ----------
+    const gpi = num('gpi');
+    const insertWeight = num('insertWeight');
+    const nockWeight = num('nockWeight');
+    const fletchWeight = num('fletchWeight');
+    const fletchPos = num('fletchPos');
+
+    let foc = null, cgPos = null, totalWeight = null;
+    if (arrowLength !== null && pointWeight !== null && gpi !== null && insertWeight !== null &&
+        nockWeight !== null && fletchWeight !== null && fletchPos !== null && arrowLength > 0){
+      const shaftWeight = gpi * arrowLength;
+      const shaftCG = arrowLength / 2;
+      const frontWeight = pointWeight + insertWeight; // treated as concentrated at the front tip
+      totalWeight = shaftWeight + frontWeight + nockWeight + fletchWeight;
+      const moment = (shaftWeight * shaftCG) + (frontWeight * arrowLength) + (nockWeight * 0) + (fletchWeight * fletchPos);
+      cgPos = moment / totalWeight;
+      foc = ((cgPos - arrowLength/2) / arrowLength) * 100;
+    }
+
+    let focTagText = '', focTagColor = 'rgba(246,239,225,0.14)';
+    if (foc !== null){
+      $('foc-big').textContent = fmt(foc,1) + '%';
+      $('out-foc').textContent = fmt(foc,1) + '%';
+      $('foc-breakdown').innerHTML =
+        '<div><span>Total build weight</span><span>' + fmt(totalWeight,0) + ' gr</span></div>' +
+        '<div><span>Balance point from nock</span><span>' + fmt(cgPos,2) + ' in</span></div>' +
+        '<div><span>Arrow length</span><span>' + fmt(arrowLength,2) + ' in</span></div>' +
+        '<div><span>FOC</span><span>' + fmt(foc,1) + '%</span></div>';
+
+      if (foc < 8){ focTagText = 'Light — could feel twitchy in flight'; }
+      else if (foc < 12){ focTagText = 'Typical target range'; }
+      else if (foc < 19){ focTagText = 'Hunting-recommended range'; }
+      else { focTagText = 'High FOC — check penetration vs. drop tradeoff'; }
+    } else {
+      $('foc-big').textContent = '—';
+      $('out-foc').textContent = '—';
+      $('foc-breakdown').innerHTML = '';
+    }
+    $('foc-tag').textContent = focTagText;
+
+    // ---------- diagram ----------
+    if (arrowLength !== null && arrowLength > 0){
+      const X0 = 60, X1 = 580; // px range representing 0..arrowLength inches
+      const pxPerIn = (X1 - X0) / arrowLength;
+
+      // fletching marks + label
+      const fletchX = X0 + Math.min(Math.max(fletchPos || 0, 0), arrowLength) * pxPerIn;
+      const fg = $('fletch-marks');
+      fg.innerHTML = '';
+      [-8,0,8].forEach(function(off){
+        const l = document.createElementNS('http://www.w3.org/2000/svg','line');
+        l.setAttribute('x1', fletchX + off);
+        l.setAttribute('y1', 58);
+        l.setAttribute('x2', fletchX + off + 4);
+        l.setAttribute('y2', 82);
+        l.setAttribute('stroke', '#C1622D');
+        l.setAttribute('stroke-width', '2');
+        fg.appendChild(l);
+      });
+      $('fletch-label').setAttribute('x', fletchX);
+
+      // geometric center
+      const centerX = X0 + (arrowLength/2) * pxPerIn;
+      $('center-line').setAttribute('x1', centerX);
+      $('center-line').setAttribute('x2', centerX);
+      $('center-label').setAttribute('x', centerX);
+
+      // balance point
+      if (cgPos !== null){
+        const cgX = X0 + Math.min(Math.max(cgPos,0),arrowLength) * pxPerIn;
+        $('cg-line').setAttribute('x1', cgX);
+        $('cg-line').setAttribute('x2', cgX);
+        $('cg-arrow').setAttribute('points', cgX+',100 '+(cgX-7)+',112 '+(cgX+7)+',112');
+        $('cg-label').setAttribute('x', cgX);
+        $('cg-sublabel').setAttribute('x', cgX);
+        $('cg-sublabel').textContent = fmt(cgPos,2) + '" from nock · FOC ' + fmt(foc,1) + '%';
+        $('cg-marker').style.display = '';
+      } else {
+        $('cg-marker').style.display = 'none';
+      }
+    }
+
+    // FOC scale pointer
+    const labelsWrap = $('foc-scale-labels');
+    labelsWrap.innerHTML = '';
+    if (foc !== null){
+      const pct = Math.min(Math.max(foc, -2), 24); // clamp for display
+      const posPct = ((pct + 2) / 26) * 100; // map -2..24 range onto 0..100%
+      const marker = document.createElement('div');
+      marker.className = 'foc-pointer';
+      marker.style.left = posPct + '%';
+      marker.textContent = '▲ ' + fmt(foc,1) + '%';
+      labelsWrap.appendChild(marker);
+    }
+  }
+
+  fields.forEach(function(id){
+    const el = $(id);
+    if (el){
+      el.addEventListener('input', recalc);
+      el.addEventListener('change', recalc);
+    }
+  });
+
+  recalc();
+})();
+</script>
+
+</body>
+</html>
